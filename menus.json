@@ -49,7 +49,7 @@
       ]
     },
     "System Status": {
-      "expanded": false,
+      "expanded": true,
       "items": [
         {
           "label": "Disk Usage",
@@ -72,7 +72,7 @@
       ]
     },
     "Development": {
-      "expanded": false,
+      "expanded": true,
       "items": [
         {
           "label": "Python Version",
@@ -91,6 +91,6 @@
   },
   "app_settings": {
     "theme": "classic",
-    "title": "Matt's Menu"
+    "title": "Menu Maker \u2014 Enhanced Categorized Menu System"
   }
 }
