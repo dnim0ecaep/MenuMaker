@@ -1,7 +1,7 @@
 {
   "categories": {
     "System Tools": {
-      "expanded": true,
+      "expanded": false,
       "items": [
         {
           "label": "System Monitor",
@@ -85,6 +85,65 @@
           "cmd": "python3 main.py",
           "info": "Restart the MenuWorks application",
           "category": "Development"
+        }
+      ]
+    },
+    "Bin Executables": {
+      "expanded": true,
+      "items": [
+        {
+          "label": "Backup System",
+          "cmd": "./bin/backup-system",
+          "info": "Executable: backup-system",
+          "category": "Bin Executables"
+        },
+        {
+          "label": "Network Monitor",
+          "cmd": "./bin/network-monitor",
+          "info": "Executable: network-monitor",
+          "category": "Bin Executables"
+        },
+        {
+          "label": "Log Analyzer",
+          "cmd": "./bin/log-analyzer",
+          "info": "Executable: log-analyzer",
+          "category": "Bin Executables"
+        },
+        {
+          "label": "Btop",
+          "cmd": "./bin/btop",
+          "info": "Executable: btop",
+          "category": "Bin Executables"
+        },
+        {
+          "label": "Taskwarrior Tui",
+          "cmd": "./bin/taskwarrior-tui",
+          "info": "Executable: taskwarrior-tui",
+          "category": "Bin Executables"
+        },
+        {
+          "label": "K9S",
+          "cmd": "./bin/k9s",
+          "info": "Executable: k9s",
+          "category": "Bin Executables"
+        },
+        {
+          "label": "Lazydocker",
+          "cmd": "./bin/lazydocker",
+          "info": "Executable: lazydocker",
+          "category": "Bin Executables"
+        },
+        {
+          "label": "Btm",
+          "cmd": "./bin/btm",
+          "info": "Executable: btm",
+          "category": "Bin Executables"
+        },
+        {
+          "label": "Lazygit",
+          "cmd": "./bin/lazygit",
+          "info": "Executable: lazygit",
+          "category": "Bin Executables"
         }
       ]
     }

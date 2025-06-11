@@ -504,6 +504,7 @@ class MenuMaker(App):
         # Additional Linux-specific navigation keys
         Binding("ctrl+p", "cursor_up", "Up Alt", show=False),
         Binding("ctrl+n", "cursor_down", "Down Alt", show=False),
+        Binding("ctrl+b", "scan_bin_directory", "Scan ./bin", show=True),
     ]
     
     # Reactive state
@@ -779,7 +780,7 @@ class MenuMaker(App):
             total = len(self.display_items)
             current = self.current_index + 1 if self.display_items else 0
             theme_name = self.app_theme.title()
-            self.status_bar.update(f"Item {current}/{total} | Theme: {theme_name} | ↑↓ Navigate | Enter Execute | E Edit | I Info | Space Toggle")
+            self.status_bar.update(f"Item {current}/{total} | Theme: {theme_name} | ↑↓ Navigate | Enter Execute | E Edit | I Info | ^B Scan")
     
     def watch_current_index(self, new_index: int) -> None:
         """React to index changes."""
@@ -1209,6 +1210,65 @@ class MenuMaker(App):
         
         # Apply the dynamic CSS
         self.stylesheet.add_source(dynamic_css)
+    
+    def action_scan_bin_directory(self) -> None:
+        """Scan ./bin directory and add executables as menu items."""
+        self.scan_and_add_bin_executables()
+    
+    def scan_and_add_bin_executables(self) -> None:
+        """Scan ./bin directory for executables and add them to menu."""
+        bin_path = Path("./bin")
+        
+        if not bin_path.exists() or not bin_path.is_dir():
+            return  # Silent handling - no bin directory found
+        
+        # Get existing commands to avoid duplicates
+        existing_commands = set()
+        for category_data in self.menu_data.values():
+            for item in category_data.get('items', []):
+                cmd = item.get('cmd', '').strip()
+                if cmd:
+                    existing_commands.add(cmd)
+        
+        # Scan for executable files
+        new_executables = []
+        try:
+            for file_path in bin_path.iterdir():
+                if file_path.is_file() and os.access(file_path, os.X_OK):
+                    # Create command path relative to current directory
+                    cmd = f"./bin/{file_path.name}"
+                    
+                    # Skip if already exists
+                    if cmd in existing_commands:
+                        continue
+                    
+                    # Create menu item
+                    executable_name = file_path.name.replace('_', ' ').replace('-', ' ').title()
+                    new_item = {
+                        "label": executable_name,
+                        "cmd": cmd,
+                        "info": f"Executable: {file_path.name}",
+                        "category": "Bin Executables"
+                    }
+                    new_executables.append(new_item)
+        
+        except Exception:
+            return  # Silent handling of scan errors
+        
+        # Add new executables to menu
+        if new_executables:
+            # Ensure "Bin Executables" category exists
+            if "Bin Executables" not in self.menu_data:
+                updated_data = dict(self.menu_data)
+                updated_data["Bin Executables"] = {
+                    "expanded": True,
+                    "items": []
+                }
+                self.menu_data = updated_data
+            
+            # Add new items to the category
+            for new_item in new_executables:
+                self.add_new_item(new_item)
     
     async def action_exit_app(self) -> None:
         """Exit the application."""
