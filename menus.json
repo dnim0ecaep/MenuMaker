@@ -1,0 +1,96 @@
+{
+  "categories": {
+    "System Tools": {
+      "expanded": true,
+      "items": [
+        {
+          "label": "System Monitor",
+          "cmd": "htop",
+          "info": "Interactive process viewer and system monitor",
+          "category": "System Tools"
+        },
+        {
+          "label": "System Information",
+          "cmd": "uname -a",
+          "info": "Display system and kernel information",
+          "category": "System Tools"
+        },
+        {
+          "label": "Process List",
+          "cmd": "ps aux",
+          "info": "Show all running processes with details",
+          "category": "System Tools",
+          "pause": true
+        }
+      ]
+    },
+    "File Management": {
+      "expanded": true,
+      "items": [
+        {
+          "label": "File Manager",
+          "cmd": "mc",
+          "info": "Midnight Commander - full-featured file manager",
+          "category": "File Management"
+        },
+        {
+          "label": "Text Editor",
+          "cmd": "nano",
+          "info": "Simple command-line text editor",
+          "category": "File Management"
+        },
+        {
+          "label": "Directory Listing",
+          "cmd": "ls -la",
+          "info": "List directory contents with detailed information",
+          "category": "File Management",
+          "pause": true
+        }
+      ]
+    },
+    "System Status": {
+      "expanded": false,
+      "items": [
+        {
+          "label": "Disk Usage",
+          "cmd": "df -h",
+          "info": "Display filesystem disk space usage",
+          "category": "System Status"
+        },
+        {
+          "label": "Memory Usage",
+          "cmd": "free -h",
+          "info": "Display amount of free and used memory",
+          "category": "System Status"
+        },
+        {
+          "label": "Network Status",
+          "cmd": "ip addr show",
+          "info": "Show network interface configuration",
+          "category": "System Status"
+        }
+      ]
+    },
+    "Development": {
+      "expanded": false,
+      "items": [
+        {
+          "label": "Python Version",
+          "cmd": "python3 --version",
+          "info": "Display installed Python version",
+          "category": "Development"
+        },
+        {
+          "label": "Return to MenuWorks",
+          "cmd": "python3 main.py",
+          "info": "Restart the MenuWorks application",
+          "category": "Development"
+        }
+      ]
+    }
+  },
+  "app_settings": {
+    "theme": "classic",
+    "title": "Matt's Menu"
+  }
+}
