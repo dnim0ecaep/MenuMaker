@@ -357,7 +357,7 @@ class MenuMaker(App):
         height: 1fr;
         border: solid #00b4d8;
         background: #034e68;
-        padding: 1;
+        padding: 0;
     }
     
     .status-bar {
@@ -374,9 +374,8 @@ class MenuMaker(App):
         border: solid #00b4d8;
         background: #034e68;
         padding: 1;
-        margin: 1;
+        margin: 0;
         overflow-y: auto;
-        min-height: 20;
     }
     
     .category-header {
@@ -564,7 +563,7 @@ class MenuMaker(App):
             with open(self.config_file, 'w') as f:
                 json.dump(data, f, indent=2)
         except Exception as e:
-            self.notify(f"Error saving menu data: {e}", severity="error")
+            pass  # Silently handle save errors
     
     def compose(self) -> ComposeResult:
         """Create the application layout."""
@@ -587,6 +586,8 @@ class MenuMaker(App):
         self.update_title()
         self.update_menu_display()
         self.update_status()
+        # Ensure proper initial index setting
+        object.__setattr__(self, 'current_index', 0)
     
     def update_menu_display(self) -> None:
         """Update menu display with categories and items."""
@@ -602,6 +603,7 @@ class MenuMaker(App):
         self.cleanup_empty_categories()
         
         # Build flattened display list and widgets
+        total_items = 0
         for category_name, category_data in self.menu_data.items():
             # Add category header with proper prefix
             is_expanded = category_data.get('expanded', True)
@@ -611,23 +613,36 @@ class MenuMaker(App):
             self.menu_container.mount(category_header)
             self.menu_widgets.append(category_header)
             self.display_items.append({"type": "category", "name": category_name, "widget": category_header})
+            total_items += 1
             
             # Add items if expanded
             if is_expanded:
-                for item in category_data.get('items', []):
-                    item_widget = Static(f"  {item['label']}", classes="menu-item")
+                items = category_data.get('items', [])
+                for item in items:
+                    item_widget = Static(f"    {item['label']}", classes="menu-item")
                     self.menu_container.mount(item_widget)
                     self.menu_widgets.append(item_widget)
                     self.display_items.append({"type": "item", "data": item, "widget": item_widget})
+                    total_items += 1
         
-        # Update highlighting and ensure container refreshes
-        self.update_highlighting()
-        
-        # Force container refresh to show all items
+        # Force container refresh and multiple highlighting updates for cross-platform compatibility
         if self.menu_container:
             self.menu_container.refresh()
-            # Ensure all widgets are visible and force layout
-            self.call_later(self.update_highlighting)
+        
+        # Force immediate highlighting update and ensure container shows all content
+        self.update_highlighting()
+        
+        # Ensure container can scroll and shows all content
+        if self.menu_container and total_items > 0:
+            # Force container to show all content and reset scroll position
+            self.menu_container.scroll_home(animate=False)
+            # Ensure the current selection is visible
+            if 0 <= self.current_index < len(self.display_items):
+                try:
+                    widget = self.display_items[self.current_index]["widget"]
+                    widget.scroll_visible()
+                except (IndexError, KeyError):
+                    pass
     
     def cleanup_empty_categories(self) -> None:
         """Remove categories that have no items."""
@@ -646,16 +661,30 @@ class MenuMaker(App):
         if not self.display_items:
             return
 
-        self.current_index = max(0, min(self.current_index, len(self.display_items) - 1))
+        # Ensure index is always within valid range
+        current_idx = max(0, min(self.current_index, len(self.display_items) - 1))
+        object.__setattr__(self, 'current_index', current_idx)
 
+        # Clear all selections with explicit widget access
         for i, item in enumerate(self.display_items):
-            widget = item["widget"]
-            if i == self.current_index:
-                widget.add_class("-selected")
-                if self.menu_container:
-                    widget.scroll_visible(animate=False)
-            else:
+            widget = item.get("widget")
+            if widget and hasattr(widget, "remove_class"):
                 widget.remove_class("-selected")
+        
+        # Apply selection to current item with explicit validation
+        if 0 <= current_idx < len(self.display_items):
+            current_item = self.display_items[current_idx]
+            current_widget = current_item.get("widget")
+            
+            if current_widget and hasattr(current_widget, "add_class"):
+                current_widget.add_class("-selected")
+                
+                # Force visibility with synchronous operations for Debian
+                if self.menu_container and hasattr(current_widget, "scroll_visible"):
+                    try:
+                        current_widget.scroll_visible(animate=False)
+                    except Exception:
+                        pass  # Ignore scroll errors on different platforms
     def update_title(self) -> None:
         """Update the header title."""
         if hasattr(self, 'header'):
@@ -672,12 +701,8 @@ class MenuMaker(App):
     
     def watch_current_index(self, new_index: int) -> None:
         """React to index changes."""
-        if self.display_items:
-            self.current_index = max(0, min(new_index, len(self.display_items) - 1))
-            self.update_highlighting()
-            self.update_status()
-        else:
-            self.current_index = 0
+        # Disable reactive updates to prevent conflicts
+        pass
     
     def watch_menu_data(self, new_data: Dict[str, Any]) -> None:
         """React to menu data changes."""
@@ -686,17 +711,27 @@ class MenuMaker(App):
     
     async def action_cursor_up(self) -> None:
         """Move cursor up."""
-        if self.display_items and len(self.display_items) > 0:
-            new_index = max(0, self.current_index - 1)
-            if new_index != self.current_index:
-                self.current_index = new_index
+        if not self.display_items or len(self.display_items) == 0:
+            return
+        
+        new_index = max(0, self.current_index - 1)
+        if new_index != self.current_index:
+            # Direct assignment without triggering reactive updates
+            object.__setattr__(self, 'current_index', new_index)
+            self.update_highlighting()
+            self.update_status()
     
     async def action_cursor_down(self) -> None:
         """Move cursor down."""
-        if self.display_items and len(self.display_items) > 0:
-            new_index = min(len(self.display_items) - 1, self.current_index + 1)
-            if new_index != self.current_index:
-                self.current_index = new_index
+        if not self.display_items or len(self.display_items) == 0:
+            return
+        
+        new_index = min(len(self.display_items) - 1, self.current_index + 1)
+        if new_index != self.current_index:
+            # Direct assignment without triggering reactive updates
+            object.__setattr__(self, 'current_index', new_index)
+            self.update_highlighting()
+            self.update_status()
     
     async def action_execute_item(self) -> None:
         """Execute item or toggle category based on selection."""
@@ -712,7 +747,7 @@ class MenuMaker(App):
                 pause_setting = current_item["data"].get("pause", False)
                 await self.run_external_command(command, pause_setting)
             else:
-                self.notify("No command specified", severity="warning")
+                pass  # Silently handle missing command
         elif current_item["type"] == "category":
             # Toggle category expansion/collapse
             await self.action_toggle_category()
@@ -740,10 +775,8 @@ class MenuMaker(App):
                     # Clear screen immediately after app exits
                     os.system('clear')
             
-            self.notify(f"Returned from Menu Maker")
-            
         except Exception as e:
-            self.notify(f"Error executing command: {e}", severity="error")
+            pass  # Silently handle execution errors
     
     async def action_toggle_category(self) -> None:
         """Toggle category expansion and save state."""
@@ -790,7 +823,7 @@ class MenuMaker(App):
         if current_item["type"] == "item":
             self.push_screen(InfoScreen(current_item["data"]))
         else:
-            self.notify("No info available for categories", severity="warning")
+            pass  # Silently handle category info requests
     
     def action_edit_item(self) -> None:
         """Edit the currently selected item or category."""
@@ -846,7 +879,6 @@ class MenuMaker(App):
         self.menu_data = updated_data
         self.save_menu_data()
         self.update_menu_display()
-        self.notify(f"Added: {item_data['label']}")
     
     def update_item(self, old_item: Dict[str, str], new_item: Dict[str, str]) -> None:
         """Update an existing item."""
@@ -866,11 +898,7 @@ class MenuMaker(App):
                     self.menu_data = updated_data
                     self.save_menu_data()
                     self.update_menu_display()
-                    self.notify(f"Updated: {new_item['label']}")
                     return
-        
-        # If not found, notify user
-        self.notify(f"Item not found for update: {old_label}", severity="warning")
     
     def rename_category(self, old_name: str, new_name: str) -> None:
         """Rename a category and update all items in it."""
@@ -893,7 +921,6 @@ class MenuMaker(App):
         self.menu_data = updated_data
         self.save_menu_data()
         self.update_menu_display()
-        self.notify(f"Renamed category: {old_name} → {new_name}")
     
     async def action_delete_item(self) -> None:
         """Delete the currently selected item."""
@@ -920,13 +947,10 @@ class MenuMaker(App):
                     self.menu_data = updated_data
                     self.save_menu_data()
                     self.update_menu_display()
-                    self.notify(f"Deleted: {item_data['label']}")
                     
                     # Adjust current index
                     if self.current_index >= len(self.display_items) - 1:
                         self.current_index = max(0, len(self.display_items) - 2)
-        else:
-            self.notify("Cannot delete categories directly", severity="warning")
 
     def action_change_theme(self) -> None:
         """Open theme selection screen."""
@@ -935,7 +959,6 @@ class MenuMaker(App):
                 self.app_theme = result["theme"]
                 self.apply_theme(result["theme"])
                 self.save_menu_data()  # Save theme to persist across sessions
-                self.notify(f"Applied {result['theme'].title()} theme to Menu Maker")
         
         self.push_screen(ThemeSelectionScreen(self.app_theme), callback=handle_theme_result)
     
@@ -946,7 +969,6 @@ class MenuMaker(App):
                 self.app_title = result["title"]
                 self.update_title()
                 self.save_menu_data()
-                self.notify(f"Title updated to: {result['title']}")
         
         self.push_screen(EditTitleScreen(self.app_title), callback=handle_title_result)
     
