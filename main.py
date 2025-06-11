@@ -496,10 +496,14 @@ class MenuMaker(App):
         Binding("ctrl+t", "edit_title", "Edit Title", show=True),
         Binding("i", "show_info", "Info", show=True),
         Binding("space", "toggle_category", "Toggle Category", show=True),
-        Binding("up", "cursor_up", "Up", show=False),
-        Binding("down", "cursor_down", "Down", show=False),
+        # Enhanced key bindings for Linux compatibility
+        Binding("up,k", "cursor_up", "Up", show=False),
+        Binding("down,j", "cursor_down", "Down", show=False),
         Binding("tab", "cursor_down", "Next", show=False),
         Binding("shift+tab", "cursor_up", "Previous", show=False),
+        # Additional Linux-specific navigation keys
+        Binding("ctrl+p", "cursor_up", "Up Alt", show=False),
+        Binding("ctrl+n", "cursor_down", "Down Alt", show=False),
     ]
     
     # Reactive state
@@ -515,7 +519,38 @@ class MenuMaker(App):
         self.config_file = Path("menus.json")
         self.app_theme = "classic"
         self.app_title = "Menu Maker — Enhanced Categorized Menu System"
+        
+        # Linux/Debian compatibility detection
+        self.is_linux_system = self.detect_linux_system()
+        self.terminal_type = self.detect_terminal_type()
+        
         self.load_menu_data()
+    
+    def detect_linux_system(self) -> bool:
+        """Detect if running on Linux system."""
+        try:
+            return os.name == 'posix' and 'linux' in os.uname().sysname.lower()
+        except:
+            return False
+    
+    def detect_terminal_type(self) -> str:
+        """Detect terminal type for compatibility adjustments."""
+        try:
+            term = os.environ.get('TERM', '').lower()
+            term_program = os.environ.get('TERM_PROGRAM', '').lower()
+            
+            if 'xterm' in term or 'gnome' in term_program:
+                return 'xterm'
+            elif 'screen' in term:
+                return 'screen'
+            elif 'tmux' in term:
+                return 'tmux'
+            elif 'linux' in term:
+                return 'linux_console'
+            else:
+                return 'unknown'
+        except:
+            return 'unknown'
     
     def load_menu_data(self) -> None:
         """Load menu data from JSON file."""
@@ -657,7 +692,7 @@ class MenuMaker(App):
             self.save_menu_data()
     
     def update_highlighting(self) -> None:
-        """Update visual highlighting for current selection."""
+        """Update visual highlighting with enhanced Linux compatibility."""
         if not self.display_items:
             return
 
@@ -665,11 +700,14 @@ class MenuMaker(App):
         current_idx = max(0, min(self.current_index, len(self.display_items) - 1))
         object.__setattr__(self, 'current_index', current_idx)
 
-        # Clear all selections with explicit widget access
+        # Clear all selections with explicit widget access and platform-specific timing
         for i, item in enumerate(self.display_items):
             widget = item.get("widget")
             if widget and hasattr(widget, "remove_class"):
                 widget.remove_class("-selected")
+                # Force immediate refresh for Linux systems
+                if hasattr(widget, "refresh"):
+                    widget.refresh()
         
         # Apply selection to current item with explicit validation
         if 0 <= current_idx < len(self.display_items):
@@ -679,12 +717,56 @@ class MenuMaker(App):
             if current_widget and hasattr(current_widget, "add_class"):
                 current_widget.add_class("-selected")
                 
-                # Force visibility with synchronous operations for Debian
-                if self.menu_container and hasattr(current_widget, "scroll_visible"):
-                    try:
-                        current_widget.scroll_visible(animate=False)
-                    except Exception:
-                        pass  # Ignore scroll errors on different platforms
+                # Force immediate visual update for Linux terminals
+                if hasattr(current_widget, "refresh"):
+                    current_widget.refresh()
+                
+                # Enhanced scrolling with Linux-specific optimizations
+                if self.menu_container:
+                    self.ensure_widget_visible(current_widget, current_idx)
+    
+    def ensure_widget_visible(self, widget, index: int) -> None:
+        """Ensure widget is visible with Linux-optimized scrolling."""
+        if not widget or not self.menu_container:
+            return
+            
+        try:
+            # Primary scrolling method for most terminals
+            if hasattr(widget, "scroll_visible"):
+                widget.scroll_visible(animate=False)
+                return
+        except Exception:
+            pass
+            
+        try:
+            # Alternative for containers that support widget scrolling
+            if hasattr(self.menu_container, "scroll_to_widget"):
+                self.menu_container.scroll_to_widget(widget, animate=False)
+                return
+        except Exception:
+            pass
+            
+        # Linux-specific fallback with manual calculation
+        if self.is_linux_system:
+            try:
+                # Calculate widget position and container viewport
+                widget_region = getattr(widget, 'region', None)
+                container_region = getattr(self.menu_container, 'region', None)
+                
+                if widget_region and container_region:
+                    # Simple scroll calculation based on widget position
+                    widget_top = widget_region.y
+                    container_height = container_region.height
+                    
+                    # Scroll to ensure widget is in viewport
+                    if hasattr(self.menu_container, 'scroll_to'):
+                        scroll_y = max(0, widget_top - (container_height // 2))
+                        self.menu_container.scroll_to(0, scroll_y, animate=False)
+            except Exception:
+                # Final fallback: force container refresh
+                if hasattr(self.menu_container, 'refresh'):
+                    self.menu_container.refresh()
+    
     def update_title(self) -> None:
         """Update the header title."""
         if hasattr(self, 'header'):
@@ -710,28 +792,48 @@ class MenuMaker(App):
         self.update_status()
     
     async def action_cursor_up(self) -> None:
-        """Move cursor up."""
+        """Move cursor up with enhanced Linux compatibility."""
         if not self.display_items or len(self.display_items) == 0:
             return
         
-        new_index = max(0, self.current_index - 1)
+        # Calculate new index with wrap-around for better UX
+        new_index = (self.current_index - 1) % len(self.display_items)
+        
         if new_index != self.current_index:
             # Direct assignment without triggering reactive updates
             object.__setattr__(self, 'current_index', new_index)
-            self.update_highlighting()
-            self.update_status()
+            
+            # Linux-optimized update strategy
+            if self.is_linux_system:
+                # Immediate synchronous updates for Linux terminals
+                self.update_highlighting()
+                self.update_status()
+            else:
+                # Asynchronous updates for other systems
+                self.call_after_refresh(self.update_highlighting)
+                self.call_after_refresh(self.update_status)
     
     async def action_cursor_down(self) -> None:
-        """Move cursor down."""
+        """Move cursor down with enhanced Linux compatibility."""
         if not self.display_items or len(self.display_items) == 0:
             return
         
-        new_index = min(len(self.display_items) - 1, self.current_index + 1)
+        # Calculate new index with wrap-around for better UX
+        new_index = (self.current_index + 1) % len(self.display_items)
+        
         if new_index != self.current_index:
             # Direct assignment without triggering reactive updates
             object.__setattr__(self, 'current_index', new_index)
-            self.update_highlighting()
-            self.update_status()
+            
+            # Linux-optimized update strategy
+            if self.is_linux_system:
+                # Immediate synchronous updates for Linux terminals
+                self.update_highlighting()
+                self.update_status()
+            else:
+                # Asynchronous updates for other systems
+                self.call_after_refresh(self.update_highlighting)
+                self.call_after_refresh(self.update_status)
     
     async def action_execute_item(self) -> None:
         """Execute item or toggle category based on selection."""
