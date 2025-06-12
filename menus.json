@@ -81,9 +81,9 @@
           "category": "Development"
         },
         {
-          "label": "Return to MenuWorks",
+          "label": "Return to Menu Maker",
           "cmd": "python3 main.py",
-          "info": "Restart the MenuWorks application",
+          "info": "Restart the Menu Maker application",
           "category": "Development"
         }
       ]
