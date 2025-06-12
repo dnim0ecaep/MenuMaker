@@ -1,0 +1,66 @@
+#compdef bandwhich
+
+autoload -U is-at-least
+
+_bandwhich() {
+    typeset -A opt_args
+    typeset -a _arguments_options
+    local ret=1
+
+    if is-at-least 5.2; then
+        _arguments_options=(-s -S -C)
+    else
+        _arguments_options=(-s -C)
+    fi
+
+    local context curcontext="$curcontext" state line
+    _arguments "${_arguments_options[@]}" : \
+'-i+[The network interface to listen on, eg. eth0]:INTERFACE: ' \
+'--interface=[The network interface to listen on, eg. eth0]:INTERFACE: ' \
+'-d+[A dns server ip to use instead of the system default]:DNS_SERVER: ' \
+'--dns-server=[A dns server ip to use instead of the system default]:DNS_SERVER: ' \
+'--log-to=[Enable debug logging to a file]:LOG_TO:_files' \
+'-u+[Choose a specific family of units]:UNIT_FAMILY:((bin-bytes\:"bytes, in powers of 2^10"
+bin-bits\:"bits, in powers of 2^10"
+si-bytes\:"bytes, in powers of 10^3"
+si-bits\:"bits, in powers of 10^3"))' \
+'--unit-family=[Choose a specific family of units]:UNIT_FAMILY:((bin-bytes\:"bytes, in powers of 2^10"
+bin-bits\:"bits, in powers of 2^10"
+si-bytes\:"bytes, in powers of 10^3"
+si-bits\:"bits, in powers of 10^3"))' \
+'-r[Machine friendlier output]' \
+'--raw[Machine friendlier output]' \
+'-n[Do not attempt to resolve IPs to their hostnames]' \
+'--no-resolve[Do not attempt to resolve IPs to their hostnames]' \
+'-s[Show DNS queries]' \
+'--show-dns[Show DNS queries]' \
+'*-v[Increase logging verbosity]' \
+'*--verbose[Increase logging verbosity]' \
+'(-v --verbose)*-q[Decrease logging verbosity]' \
+'(-v --verbose)*--quiet[Decrease logging verbosity]' \
+'-p[Show processes table only]' \
+'--processes[Show processes table only]' \
+'-c[Show connections table only]' \
+'--connections[Show connections table only]' \
+'-a[Show remote addresses table only]' \
+'--addresses[Show remote addresses table only]' \
+'-t[Show total (cumulative) usages]' \
+'--total-utilization[Show total (cumulative) usages]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'-V[Print version]' \
+'--version[Print version]' \
+&& ret=0
+}
+
+(( $+functions[_bandwhich_commands] )) ||
+_bandwhich_commands() {
+    local commands; commands=()
+    _describe -t commands 'bandwhich commands' commands "$@"
+}
+
+if [ "$funcstack[1]" = "_bandwhich" ]; then
+    _bandwhich "$@"
+else
+    compdef _bandwhich bandwhich
+fi
