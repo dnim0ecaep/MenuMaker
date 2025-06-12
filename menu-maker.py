@@ -992,7 +992,7 @@ class MenuMaker(App):
                     print()
                     print("=" * 60)
                     print(f"Command completed with exit code: {result.returncode}")
-                    print("Press Enter to return to MenuWorks...")
+                    print("Press Enter to return to MenuMaker...")
                     input()
                     os.system('clear')
                 else:
